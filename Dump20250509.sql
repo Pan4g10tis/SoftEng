@@ -1,6 +1,6 @@
 -- MySQL dump 10.13  Distrib 8.0.34, for Win64 (x86_64)
 --
--- Host: localhost    Database: industock
+-- Host: localhost    Database: indusstock
 -- ------------------------------------------------------
 -- Server version	8.0.35
 
@@ -67,7 +67,7 @@ CREATE TABLE `product` (
 
 LOCK TABLES `product` WRITE;
 /*!40000 ALTER TABLE `product` DISABLE KEYS */;
-INSERT INTO `product` VALUES (1,'Βίδα Μ8 40εκ Φλάντζα','Fournier Metalworks','BOLT',2.15),(2,'Βίδα Μ8 20εκ Φλάντζα','Fournier Metalworks','BOLT',1.6),(3,'Βίδα Μ4 20εκ Φλάντζα','Fournier Metalworks','BOLT',1.6),(4,'Παξιμάδι Μ8 με Πατούρα','Fournier Metalworks','NUT',1.79),(5,'Παξιμάδι Μ4 με Πατούρα','Fournier Metalworks','NUT',1.79),(6,'Σωλήνας Φ50 Καουτσούκ 1μ','Pipelayers','PIPE',3.4),(7,'Σωλήνας Φ50 Καουτσούκ 0.5μ','Pipelayers','PIPE',1.9),(8,'Κόφτης Καλωδίων','MKPSES Tools','TOOLS',4.8),(9,'Κατσαβίδι με καστάνια','MKPSES Tools','TOOLS',7.9),(10,'Κάβουρας','MKPSES Tools','TOOLS',5.8);
+INSERT INTO `product` VALUES (1,'Βίδα Μ8 40εκ Φλατζα','Fournier Metalworks','BOLT',2.15),(2,'Βίδα Μ8 20εκ Φλατζα','Fournier Metalworks','BOLT',1.6),(3,'Βίδα Μ4 20εκ Φλατζα','Fournier Metalworks','BOLT',1.6),(4,'Παξιμάδι Μ8 με Πατούρα','Fournier Metalworks','NUT',1.79),(5,'Παξιμάδι Μ4 με Πατούρα','Fournier Metalworks','NUT',1.79),(6,'Σωλήνας Φ50 Καουτσούκ 1μ','Pipelayers','PIPE',3.4),(7,'Σωλήνας Φ50 Καουτσούκ 0.5μ','Pipelayers','PIPE',1.9),(8,'Κόφτης Καλωδίων','MKPSES Tools','TOOLS',4.8),(9,'Κατσαβίδι με καστάνια','MKPSES Tools','TOOLS',7.9),(10,'Κάβουρας','MKPSES Tools','TOOLS',5.8);
 /*!40000 ALTER TABLE `product` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -519,4 +519,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-05-09 18:44:54
+-- Dump completed on 2025-05-09 20:47:09
