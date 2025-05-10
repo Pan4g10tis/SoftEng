@@ -8,7 +8,16 @@ class StorageManager:
        self.phone = phone
        self.storage = storage
 
-
-   @classmethod
-   def get_storage(cls, storage_id, address, email, phone):
-       my_storage = Storage(storage_id, address, email, phone)
+   def get_storage(self, mydb):
+       conn = mysql.connector.connect(
+           host=mydb.host,
+           user=mydb.user,
+           password=mydb.password,
+           database=mydb.database)
+       cursor = conn.cursor()
+       cursor.execute("SELECT id, address, email, phone FROM store INNER JOIN store_manager WHERE username = %s",
+           (self.username,))
+       result = cursor.fetchone()
+       conn.close()
+       my_storage = Storage(*result)
+       return my_storage
