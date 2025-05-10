@@ -9,6 +9,17 @@ class StoreManager:
        self.store = store
 
 
-   @classmethod
-   def get_storage(cls, store_id, address, email, phone):
-       my_store = Store(store_id, address, email, phone)
+   def get_store(self, mydb):
+       conn = mysql.connector.connect(
+           host=mydb.host,
+           user=mydb.user,
+           password=mydb.password,
+           database=mydb.database)
+       cursor = conn.cursor()
+       cursor.execute("SELECT id, address, email, phone FROM store INNER JOIN store_manager WHERE username = %s",
+           (self.username,))
+       result = cursor.fetchone()
+       conn.close()
+       my_store = Store(*result)
+       return my_store
+
