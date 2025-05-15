@@ -22,3 +22,32 @@ class StorageOrder:
             conn.commit()
         finally:
             conn.close()
+
+    def complete_order(self, mydb):
+       conn = mydb.connect_db()
+       try:
+           cursor = conn.cursor()
+           cursor.execute("UPDATE storage_order SET status = %s, end_date = CURRENT_DATE() WHERE id = %s",
+                          ("COMPLETED", self.id))
+           for p, a in zip(self.products, self.amounts):
+               cursor.execute("SELECT stock FROM product_storage_stock WHERE product = %s AND storage = %s",
+                              (p, self.id))
+               result = cursor.fetchone()
+               result = result + a
+               cursor.execute("UPDATE product_storage_stock SET stock = %s WHERE product = %s AND storage = %s",
+                              (result, p, self.id))
+           conn.commit()
+       finally:
+           conn.close()
+
+
+   def cancel_order(self, mydb):
+       conn = mydb.connect_db()
+       try:
+           cursor = conn.cursor()
+           cursor.execute("UPDATE storage_order SET status = %s, end_date = CURRENT_DATE() WHERE id = %s",
+                          ("CANCELED", self.id))
+           conn.commit()
+       finally:
+           conn.close()
+
