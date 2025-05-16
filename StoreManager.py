@@ -23,3 +23,13 @@ class StoreManager:
        my_store = Store(*result)
        return my_store
 
+   @classmethod
+   def create(cls, mydb, username):
+       conn = mydb.connect_db()
+       cursor = conn.cursor()
+       cursor.execute("SELECT manager.username, password, name, surname, email, phone, store"
+                      " FROM manager INNER JOIN store_manager ON manager.username = store_manager.username"
+                      " WHERE manager.username = %s", (username,))
+       result = cursor.fetchone()
+       manager = StoreManager(*result)
+       return manager
