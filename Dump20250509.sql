@@ -58,7 +58,7 @@ CREATE TABLE `product` (
   `type` varchar(50) DEFAULT NULL,
   `price` double DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -69,6 +69,33 @@ LOCK TABLES `product` WRITE;
 /*!40000 ALTER TABLE `product` DISABLE KEYS */;
 INSERT INTO `product` VALUES (1,'Βίδα Μ8 40εκ Φλατζα','Fournier Metalworks','BOLT',2.15),(2,'Βίδα Μ8 20εκ Φλατζα','Fournier Metalworks','BOLT',1.6),(3,'Βίδα Μ4 20εκ Φλατζα','Fournier Metalworks','BOLT',1.6),(4,'Παξιμάδι Μ8 με Πατούρα','Fournier Metalworks','NUT',1.79),(5,'Παξιμάδι Μ4 με Πατούρα','Fournier Metalworks','NUT',1.79),(6,'Σωλήνας Φ50 Καουτσούκ 1μ','Pipelayers','PIPE',3.4),(7,'Σωλήνας Φ50 Καουτσούκ 0.5μ','Pipelayers','PIPE',1.9),(8,'Κόφτης Καλωδίων','MKPSES Tools','TOOLS',4.8),(9,'Κατσαβίδι με καστάνια','MKPSES Tools','TOOLS',7.9),(10,'Κάβουρας','MKPSES Tools','TOOLS',5.8);
 /*!40000 ALTER TABLE `product` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `product_note`
+--
+
+DROP TABLE IF EXISTS `product_note`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `product_note` (
+  `product` int DEFAULT NULL,
+  `store` int DEFAULT NULL,
+  `note_text` text,
+  KEY `product` (`product`),
+  KEY `store` (`store`),
+  CONSTRAINT `product_note_ibfk_1` FOREIGN KEY (`product`) REFERENCES `product` (`id`),
+  CONSTRAINT `product_note_ibfk_2` FOREIGN KEY (`store`) REFERENCES `store` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `product_note`
+--
+
+LOCK TABLES `product_note` WRITE;
+/*!40000 ALTER TABLE `product_note` DISABLE KEYS */;
+/*!40000 ALTER TABLE `product_note` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -95,6 +122,7 @@ CREATE TABLE `product_storage_stock` (
 
 LOCK TABLES `product_storage_stock` WRITE;
 /*!40000 ALTER TABLE `product_storage_stock` DISABLE KEYS */;
+INSERT INTO `product_storage_stock` VALUES (9,1,0),(1,1,0),(2,1,0),(3,1,0),(4,1,0),(5,1,0),(6,1,0),(10,1,0),(8,1,0),(7,1,0);
 /*!40000 ALTER TABLE `product_storage_stock` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -122,6 +150,7 @@ CREATE TABLE `product_store_stock` (
 
 LOCK TABLES `product_store_stock` WRITE;
 /*!40000 ALTER TABLE `product_store_stock` DISABLE KEYS */;
+INSERT INTO `product_store_stock` VALUES (8,1,35),(7,1,47),(9,1,0),(1,1,0),(2,1,0),(3,1,0),(4,1,0),(5,1,0),(6,1,0),(10,1,0);
 /*!40000 ALTER TABLE `product_store_stock` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -194,7 +223,7 @@ CREATE TABLE `storage_order` (
   PRIMARY KEY (`id`),
   KEY `storage` (`storage`),
   CONSTRAINT `storage_order_ibfk_1` FOREIGN KEY (`storage`) REFERENCES `storage` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -203,6 +232,7 @@ CREATE TABLE `storage_order` (
 
 LOCK TABLES `storage_order` WRITE;
 /*!40000 ALTER TABLE `storage_order` DISABLE KEYS */;
+INSERT INTO `storage_order` VALUES (4,1,'PENDING','2025-05-14',NULL),(5,1,'PENDING','2025-05-14',NULL),(6,1,'PENDING','2025-05-14',NULL);
 /*!40000 ALTER TABLE `storage_order` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -230,6 +260,7 @@ CREATE TABLE `storage_order_product` (
 
 LOCK TABLES `storage_order_product` WRITE;
 /*!40000 ALTER TABLE `storage_order_product` DISABLE KEYS */;
+INSERT INTO `storage_order_product` VALUES (4,7,5),(5,8,3),(6,7,3),(6,8,2);
 /*!40000 ALTER TABLE `storage_order_product` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -354,7 +385,7 @@ CREATE TABLE `store_order` (
   `store` int DEFAULT NULL,
   `storage` int DEFAULT NULL,
   `priority` enum('NORMAL','HIGH') DEFAULT NULL,
-  `status` enum('PENDING','COMPLETED','CANCELED') DEFAULT NULL,
+  `status` enum('PENDING','CONFIRMED','SENT','COMPLETED','CANCELED') DEFAULT NULL,
   `start_date` date DEFAULT NULL,
   `end_date` date DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -362,7 +393,7 @@ CREATE TABLE `store_order` (
   KEY `storage` (`storage`),
   CONSTRAINT `store_order_ibfk_1` FOREIGN KEY (`store`) REFERENCES `store` (`id`),
   CONSTRAINT `store_order_ibfk_2` FOREIGN KEY (`storage`) REFERENCES `storage` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -371,6 +402,7 @@ CREATE TABLE `store_order` (
 
 LOCK TABLES `store_order` WRITE;
 /*!40000 ALTER TABLE `store_order` DISABLE KEYS */;
+INSERT INTO `store_order` VALUES (4,1,1,'NORMAL','COMPLETED','2024-12-12','2024-12-14'),(5,1,1,'HIGH','CANCELED','2025-01-03','2025-01-03'),(6,1,1,'NORMAL','CONFIRMED','2025-02-05','2025-05-13'),(7,1,1,'NORMAL','COMPLETED','2025-05-05','2025-05-12');
 /*!40000 ALTER TABLE `store_order` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -398,6 +430,7 @@ CREATE TABLE `store_order_product` (
 
 LOCK TABLES `store_order_product` WRITE;
 /*!40000 ALTER TABLE `store_order_product` DISABLE KEYS */;
+INSERT INTO `store_order_product` VALUES (4,1,20),(5,3,40),(6,5,30),(6,7,40),(7,8,30),(7,7,40);
 /*!40000 ALTER TABLE `store_order_product` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -415,7 +448,7 @@ CREATE TABLE `store_sale` (
   PRIMARY KEY (`id`),
   KEY `store` (`store`),
   CONSTRAINT `store_sale_ibfk_1` FOREIGN KEY (`store`) REFERENCES `store` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -424,6 +457,7 @@ CREATE TABLE `store_sale` (
 
 LOCK TABLES `store_sale` WRITE;
 /*!40000 ALTER TABLE `store_sale` DISABLE KEYS */;
+INSERT INTO `store_sale` VALUES (1,1,'2024-12-18'),(2,1,'2025-01-10'),(4,1,'2025-05-14'),(5,1,'2025-05-14'),(6,1,'2025-05-14');
 /*!40000 ALTER TABLE `store_sale` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -451,6 +485,7 @@ CREATE TABLE `store_sale_product` (
 
 LOCK TABLES `store_sale_product` WRITE;
 /*!40000 ALTER TABLE `store_sale_product` DISABLE KEYS */;
+INSERT INTO `store_sale_product` VALUES (1,8,3),(1,7,8),(2,5,10),(4,7,5),(5,8,3),(6,7,3),(6,8,2);
 /*!40000 ALTER TABLE `store_sale_product` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -507,6 +542,7 @@ CREATE TABLE `store_worker_shift` (
 
 LOCK TABLES `store_worker_shift` WRITE;
 /*!40000 ALTER TABLE `store_worker_shift` DISABLE KEYS */;
+INSERT INTO `store_worker_shift` VALUES (1,'2025-05-15','9:00','17:00');
 /*!40000 ALTER TABLE `store_worker_shift` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -519,4 +555,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-05-09 20:47:09
+-- Dump completed on 2025-05-16 22:13:21
