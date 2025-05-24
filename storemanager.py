@@ -1,11 +1,9 @@
 import tkinter as tk
-from PIL import Image, ImageTk
-from classes import StoreManager,DataBase
 from tkinter import ttk, messagebox
 from datetime import datetime, date, timedelta
-from classes import StoreOrder
-
-
+from PIL import Image, ImageTk
+import calendar
+from classes import StoreManager,  StoreOrder, WorkerShift, DataBase
 
 
 def starter_page(frame, name, store):
@@ -289,6 +287,181 @@ def get_orders(frame, store, mydb):
    fetch_orders()
 
 
+
+
+
+def get_workers(frame, store, mydb):
+   for widget in frame.winfo_children():
+       widget.destroy()
+
+
+   workers = store.show_workers(mydb)
+
+
+   list_frame = tk.Frame(frame, bg="white")
+   list_frame.pack(pady=10, fill="both", expand=True)
+
+
+   def make_popup(worker_obj):
+       def show_popup(event=None):
+           popup = tk.Toplevel()
+           popup.title(f"{worker_obj.surname} Details")
+           popup.geometry("400x500")
+           popup.configure(bg="white")
+
+
+           details = (f"Name: {worker_obj.name}\nSurname: {worker_obj.surname}\nEmail: {worker_obj.email}\n"
+                      f"Phone: {worker_obj.phone}")
+           msg = tk.Label(popup, text=details.strip(), justify="left", bg="white", font=("Arial", 12))
+           msg.pack(padx=20, pady=10)
+
+
+           form_frame = tk.Frame(popup, bg="white")
+           form_frame.pack(pady=10)
+
+
+           tk.Label(form_frame, text="Shift Date (YYYY-MM-DD):", bg="white").grid(row=0, column=0, sticky="w")
+           date_entry = tk.Entry(form_frame)
+           date_entry.grid(row=0, column=1)
+
+
+           tk.Label(form_frame, text="Start Time (HH:MM):", bg="white").grid(row=1, column=0, sticky="w")
+           start_entry = tk.Entry(form_frame)
+           start_entry.grid(row=1, column=1)
+
+
+           tk.Label(form_frame, text="End Time (HH:MM):", bg="white").grid(row=2, column=0, sticky="w")
+           end_entry = tk.Entry(form_frame)
+           end_entry.grid(row=2, column=1)
+
+
+           def submit_shift():
+               date = date_entry.get()
+               start = start_entry.get()
+               end = end_entry.get()
+               if not (date and start and end):
+                   messagebox.showerror("Error", "All fields must be filled.")
+                   return
+
+
+               try:
+                   shift = WorkerShift(worker_obj.id, date, start, end)
+                   shift.insert_store_shift(mydb)
+                   messagebox.showinfo("Success", "Shift added successfully.")
+               except Exception as e:
+                   messagebox.showerror("Error", f"Failed to add shift: {e}")
+
+
+           tk.Button(popup, text="Add Shift", command=submit_shift).pack(pady=10)
+
+
+           tk.Button(popup, text="Close", command=popup.destroy).pack(pady=10)
+
+
+       return show_popup
+
+
+   headings = ["Name", "Surname"]
+   for col, title in enumerate(headings):
+       tk.Label(list_frame, text=title, font=("Arial", 12, "bold"), bg="white", borderwidth=1, relief="solid",
+                width=20).grid(row=0, column=col)
+
+
+   for row, worker in enumerate(workers, start=1):
+       label = tk.Label(list_frame, text=worker.name, bg="white", borderwidth=1, relief="solid", width=20,
+                        cursor="hand2")
+       label.grid(row=row, column=0)
+       label.bind("<Button-1>", make_popup(worker))
+
+
+       tk.Label(list_frame, text=worker.surname, bg="white", borderwidth=1, relief="solid", width=20).grid(row=row,
+                                                                                                         column=1)
+
+
+   calendar_frame = tk.Frame(frame, bg="white")
+   calendar_frame.pack(pady=10)
+
+
+   shift_display_frame = tk.Frame(frame, bg="white")
+   shift_display_frame.pack(pady=10, fill="both", expand=True)
+
+
+   current_date = datetime.today()
+
+
+   def render_calendar(year, month):
+       for widget in calendar_frame.winfo_children():
+           widget.destroy()
+
+
+       nav_frame = tk.Frame(calendar_frame, bg="white")
+       nav_frame.pack()
+
+
+       def go_prev():
+           nonlocal current_date
+           prev_month = current_date.replace(day=1) - timedelta(days=1)
+           current_date = prev_month
+           render_calendar(current_date.year, current_date.month)
+
+
+       def go_next():
+           nonlocal current_date
+           next_month = current_date.replace(day=28) + timedelta(days=4)  # Always lands in next month
+           current_date = next_month.replace(day=1)
+           render_calendar(current_date.year, current_date.month)
+
+
+       tk.Button(nav_frame, text="<", command=go_prev).pack(side="left", padx=10)
+       tk.Label(nav_frame, text=f"{calendar.month_name[month]} {year}", font=("Arial", 14, "bold"),
+                bg="white").pack(side="left", padx=10)
+       tk.Button(nav_frame, text=">", command=go_next).pack(side="left", padx=10)
+
+
+       # Days of the week
+       days_frame = tk.Frame(calendar_frame, bg="white")
+       days_frame.pack()
+       for i, day in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]):
+           tk.Label(days_frame, text=day, bg="white", font=("Arial", 10, "bold"), width=5).grid(row=0, column=i)
+
+
+       # Calendar days
+       cal = calendar.monthcalendar(year, month)
+       for row_idx, week in enumerate(cal, start=1):
+           for col_idx, day in enumerate(week):
+               if day == 0:
+                   continue
+               date_str = f"{year}-{month:02d}-{day:02d}"
+               tk.Button(days_frame, text=str(day), width=5,
+                         command=lambda d=date_str: on_date_click(d)).grid(row=row_idx, column=col_idx, padx=1, pady=1)
+
+
+   def on_date_click(date_str):
+       for widget in shift_display_frame.winfo_children():
+           widget.destroy()
+
+
+       tk.Label(shift_display_frame, text=f"Shifts on {date_str}",
+                font=("Arial", 12, "bold"), bg="white").pack(anchor="w", padx=10, pady=(0, 5))
+
+
+       shift_found = False
+       for worker in workers:
+           shifts = worker.show_store_shift(mydb, date_str)
+           for surname, start, end in shifts:
+               shift_found = True
+               text = f"{surname}: {start} - {end}"
+               tk.Label(shift_display_frame, text=text, bg="white", font=("Arial", 11)).pack(anchor="w", padx=20,
+                                                                                             pady=2)
+
+
+       if not shift_found:
+           tk.Label(shift_display_frame, text="No shifts for this date.",
+                    bg="white", font=("Arial", 11, "italic")).pack(anchor="w", padx=20, pady=5)
+
+
+   # Initial calendar render
+   render_calendar(current_date.year, current_date.month)
 
 
 
