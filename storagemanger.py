@@ -1,6 +1,6 @@
 import tkinter as tk
 from PIL import Image, ImageTk
-from classes import StoreManager,DataBase
+from classes import StorageManager,DataBase
 
 
 
