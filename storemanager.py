@@ -1,9 +1,10 @@
+import csv
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox , filedialog
 from datetime import datetime, date, timedelta
 from PIL import Image, ImageTk
 import calendar
-from classes import StoreManager,  StoreOrder, WorkerShift, DataBase
+from classes import StoreManager,  StoreOrder, WorkerShift, DataBase , StoreSale
 
 
 def starter_page(frame, name, store):
@@ -286,6 +287,213 @@ def get_orders(frame, store, mydb):
    fetch_orders()
 
 
+def get_sales(frame, store, mydb):
+   for widget in frame.winfo_children():
+       widget.destroy()
+
+
+   def import_csv():
+       file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
+       if not file_path:
+           return
+
+
+       try:
+           with open(file_path, newline='', encoding='utf-8') as csvfile:
+               reader = csv.reader(csvfile)
+               inserted_sales = 0
+
+
+               for row in reader:
+                   products = []
+                   amounts = []
+
+
+                   for i in range(0, len(row), 2):
+                       try:
+                           product = row[i].strip()
+                           amount = float(row[i + 1].strip())
+                           products.append(product)
+                           amounts.append(amount)
+                       except (IndexError, ValueError):
+                           continue
+
+
+                   if not products:
+                       continue
+
+
+                   new_sale = StoreSale(
+                       sale_id=None,
+                       store=store.id,
+                       date=datetime.today().date(),
+                       products=products,
+                       amounts=amounts
+                   )
+                   new_sale.insert_sale(mydb)
+                   inserted_sales += 1
+
+
+               messagebox.showinfo("Import Complete", f"{inserted_sales} sale(s) imported successfully.")
+               nonlocal sales
+               sales = store.show_sales(mydb)
+               fetch_sales()
+
+
+       except Exception as e:
+           messagebox.showerror("Import Failed", f"Could not import CSV: {e}")
+
+
+   import_button = tk.Button(frame, text="Import CSV", command=import_csv)
+   import_button.pack(pady=(10, 0))
+
+
+   filter_frame = tk.Frame(frame, bg="white")
+   filter_frame.pack(pady=10)
+
+
+   tk.Label(filter_frame, text="Date: From: (YYYY-MM-DD):", bg="white").grid(row=0, column=0, padx=5, pady=5)
+   start_entry = tk.Entry(filter_frame)
+   start_entry.grid(row=0, column=1, padx=5)
+
+
+   tk.Label(filter_frame, text="To: (YYYY-MM-DD):", bg="white").grid(row=0, column=2, padx=5, pady=5)
+   end_entry = tk.Entry(filter_frame)
+   end_entry.grid(row=0, column=3, padx=5)
+
+
+   sales = store.show_sales(mydb)
+
+
+   def make_popup(sale_obj):
+       def show_popup(event=None):
+           popup = tk.Toplevel()
+           popup.title(f"Sale #{sale_obj.id} Details")
+           popup.geometry("400x300")
+           popup.configure(bg="white")
+
+
+           details = f"Order ID: {sale_obj.id}\nSale Date: {sale_obj.date}"
+
+
+           msg = tk.Label(popup, text=details.strip(), justify="left", bg="white", font=("Arial", 12))
+           msg.pack(padx=20, pady=20)
+
+
+           product_frame = tk.Frame(popup, bg="white")
+           product_frame.pack(padx=20, pady=10, anchor="w")
+
+
+           tk.Label(product_frame, text="Products Sold:", font=("Arial", 12, "bold"), bg="white").pack(anchor="w")
+
+
+           for product, amount in zip(sale_obj.products, sale_obj.amounts):
+               line = f"• {product}: {amount}"
+               tk.Label(product_frame, text=line, font=("Arial", 11), bg="white").pack(anchor="w")
+
+
+           tk.Button(popup, text="Close", command=popup.destroy).pack(pady=20)
+
+
+       return show_popup
+
+
+   def fetch_sales():
+       start = start_entry.get()
+       end = end_entry.get()
+
+
+       view_sales = sales
+
+
+       if start:
+           try:
+               start_date = datetime.strptime(start, "%Y-%m-%d").date()
+               view_sales = [s for s in view_sales if s.date >= start_date]
+           except:
+               pass
+       if end:
+           try:
+               end_date = datetime.strptime(end, "%Y-%m-%d").date()
+               view_sales = [s for s in view_sales if s.date <= end_date]
+           except:
+               pass
+
+
+       for widget in list_frame.winfo_children():
+           widget.destroy()
+
+
+       headings = ["Order ID", "Sale Date"]
+       for col, title in enumerate(headings):
+           tk.Label(list_frame, text=title, font=("Arial", 12, "bold"), bg="white", borderwidth=1, relief="solid",
+                    width=20).grid(row=0, column=col)
+
+
+       for row, sale in enumerate(view_sales, start=1):
+           label = tk.Label(list_frame, text=sale.id, bg="white", borderwidth=1, relief="solid", width=20,
+                            cursor="hand2")
+           label.grid(row=row, column=0)
+           label.bind("<Button-1>", make_popup(sale))
+
+
+           tk.Label(list_frame, text=str(sale.date), bg="white", borderwidth=1, relief="solid", width=20).grid(
+               row=row, column=1)
+
+
+   def export_csv():
+       start = start_entry.get()
+       end = end_entry.get()
+       view_sales = sales
+
+
+       if start:
+           try:
+               start_date = datetime.strptime(start, "%Y-%m-%d").date()
+               view_sales = [s for s in view_sales if s.date >= start_date]
+           except:
+               pass
+       if end:
+           try:
+               end_date = datetime.strptime(end, "%Y-%m-%d").date()
+               view_sales = [s for s in view_sales if s.date <= end_date]
+           except:
+               pass
+
+
+       if not view_sales:
+           messagebox.showinfo("Export", "No sales to export.")
+           return
+
+
+       file_path = filedialog.asksaveasfilename(defaultextension=".csv",
+                                                filetypes=[("CSV files", "*.csv")])
+       if not file_path:
+           return
+
+
+       try:
+           with open(file_path, "w", newline='', encoding="utf-8") as csvfile:
+               writer = csv.writer(csvfile)
+               for sale in view_sales:
+                   row = []
+                   for p, a in zip(sale.products, sale.amounts):
+                       row.extend([p, a])
+                   writer.writerow(row)
+           messagebox.showinfo("Export Complete", f"{len(view_sales)} sale(s) exported successfully.")
+       except Exception as e:
+           messagebox.showerror("Export Failed", f"Could not write to CSV:\n{e}")
+
+
+   tk.Button(filter_frame, text="Search", command=fetch_sales).grid(row=0, column=6, padx=10)
+   tk.Button(filter_frame, text="Export CSV", command=export_csv).grid(row=0, column=7, padx=10)
+
+
+   list_frame = tk.Frame(frame, bg="white")
+   list_frame.pack(pady=10, fill="both", expand=True)
+
+
+   fetch_sales()
 
 
 
