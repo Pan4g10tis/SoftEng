@@ -1,8 +1,9 @@
 import tkinter as tk
+from tkinter import ttk, messagebox
+import calendar
+from datetime import datetime, date, timedelta
 from PIL import Image, ImageTk
-from classes import StorageManager,DataBase
-
-
+from classes import StorageManager, Store, WorkerShift, DataBase
 
 
 def starter_page(frame, name, storage):
@@ -16,6 +17,283 @@ def starter_page(frame, name, storage):
    starter_label.pack(pady=10)
 
 
+def get_workers(frame, storage, mydb):
+   for widget in frame.winfo_children():
+       widget.destroy()
+
+
+   workers = storage.show_workers(mydb)
+
+
+   list_frame = tk.Frame(frame, bg="white")
+   list_frame.pack(pady=10, fill="both", expand=True)
+
+
+   def make_popup(worker_obj):
+       def show_popup(event=None):
+           popup = tk.Toplevel()
+           popup.title(f"{worker_obj.surname} Details")
+           popup.geometry("400x500")
+           popup.configure(bg="white")
+
+
+           details = (f"Name: {worker_obj.name}\nSurname: {worker_obj.surname}\nEmail: {worker_obj.email}\n"
+                      f"Phone: {worker_obj.phone}")
+           msg = tk.Label(popup, text=details.strip(), justify="left", bg="white", font=("Arial", 12))
+           msg.pack(padx=20, pady=10)
+
+
+           form_frame = tk.Frame(popup, bg="white")
+           form_frame.pack(pady=10)
+
+
+           tk.Label(form_frame, text="Shift Date (YYYY-MM-DD):", bg="white").grid(row=0, column=0, sticky="w")
+           date_entry = tk.Entry(form_frame)
+           date_entry.grid(row=0, column=1)
+
+
+           tk.Label(form_frame, text="Start Time (HH:MM):", bg="white").grid(row=1, column=0, sticky="w")
+           start_entry = tk.Entry(form_frame)
+           start_entry.grid(row=1, column=1)
+
+
+           tk.Label(form_frame, text="End Time (HH:MM):", bg="white").grid(row=2, column=0, sticky="w")
+           end_entry = tk.Entry(form_frame)
+           end_entry.grid(row=2, column=1)
+
+
+           def submit_shift():
+               date = date_entry.get()
+               start = start_entry.get()
+               end = end_entry.get()
+               if not (date and start and end):
+                   messagebox.showerror("Error", "All fields must be filled.")
+                   return
+
+
+               try:
+                   shift = WorkerShift(worker_obj.id, date, start, end)
+                   shift.insert_storage_shift(mydb)
+                   messagebox.showinfo("Success", "Shift added successfully.")
+               except Exception as e:
+                   messagebox.showerror("Error", f"Failed to add shift: {e}")
+
+
+           tk.Button(popup, text="Add Shift", command=submit_shift).pack(pady=10)
+
+
+           tk.Button(popup, text="Close", command=popup.destroy).pack(pady=10)
+
+
+       return show_popup
+
+
+   headings = ["Name", "Surname"]
+   for col, title in enumerate(headings):
+       tk.Label(list_frame, text=title, font=("Arial", 12, "bold"), bg="white", borderwidth=1, relief="solid",
+                width=20).grid(row=0, column=col)
+
+
+   for row, worker in enumerate(workers, start=1):
+       label = tk.Label(list_frame, text=worker.name, bg="white", borderwidth=1, relief="solid", width=20,
+                        cursor="hand2")
+       label.grid(row=row, column=0)
+       label.bind("<Button-1>", make_popup(worker))
+
+
+       tk.Label(list_frame, text=worker.surname, bg="white", borderwidth=1, relief="solid", width=20).grid(row=row,
+                                                                                                         column=1)
+
+
+   calendar_frame = tk.Frame(frame, bg="white")
+   calendar_frame.pack(pady=10)
+
+
+   shift_display_frame = tk.Frame(frame, bg="white")
+   shift_display_frame.pack(pady=10, fill="both", expand=True)
+
+
+   current_date = datetime.today()
+
+
+   def render_calendar(year, month):
+       for widget in calendar_frame.winfo_children():
+           widget.destroy()
+
+
+       nav_frame = tk.Frame(calendar_frame, bg="white")
+       nav_frame.pack()
+
+
+       def go_prev():
+           nonlocal current_date
+           prev_month = current_date.replace(day=1) - timedelta(days=1)
+           current_date = prev_month
+           render_calendar(current_date.year, current_date.month)
+
+
+       def go_next():
+           nonlocal current_date
+           next_month = current_date.replace(day=28) + timedelta(days=4)  # Always lands in next month
+           current_date = next_month.replace(day=1)
+           render_calendar(current_date.year, current_date.month)
+
+
+       tk.Button(nav_frame, text="<", command=go_prev).pack(side="left", padx=10)
+       tk.Label(nav_frame, text=f"{calendar.month_name[month]} {year}", font=("Arial", 14, "bold"),
+                bg="white").pack(side="left", padx=10)
+       tk.Button(nav_frame, text=">", command=go_next).pack(side="left", padx=10)
+
+
+       # Days of the week
+       days_frame = tk.Frame(calendar_frame, bg="white")
+       days_frame.pack()
+       for i, day in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]):
+           tk.Label(days_frame, text=day, bg="white", font=("Arial", 10, "bold"), width=5).grid(row=0, column=i)
+
+
+       # Calendar days
+       cal = calendar.monthcalendar(year, month)
+       for row_idx, week in enumerate(cal, start=1):
+           for col_idx, day in enumerate(week):
+               if day == 0:
+                   continue
+               date_str = f"{year}-{month:02d}-{day:02d}"
+               tk.Button(days_frame, text=str(day), width=5,
+                         command=lambda d=date_str: on_date_click(d)).grid(row=row_idx, column=col_idx, padx=1, pady=1)
+
+
+   def on_date_click(date_str):
+       for widget in shift_display_frame.winfo_children():
+           widget.destroy()
+
+
+       tk.Label(shift_display_frame, text=f"Shifts on {date_str}",
+                font=("Arial", 12, "bold"), bg="white").pack(anchor="w", padx=10, pady=(0, 5))
+
+
+       shift_found = False
+       for worker in workers:
+           shifts = worker.show_store_shift(mydb, date_str)
+           for surname, start, end in shifts:
+               shift_found = True
+               text = f"{surname}: {start} - {end}"
+               tk.Label(shift_display_frame, text=text, bg="white", font=("Arial", 11)).pack(anchor="w", padx=20,
+                                                                                             pady=2)
+
+
+       if not shift_found:
+           tk.Label(shift_display_frame, text="No shifts for this date.",
+                    bg="white", font=("Arial", 11, "italic")).pack(anchor="w", padx=20, pady=5)
+
+
+   # Initial calendar render
+   render_calendar(current_date.year, current_date.month)
+
+
+
+
+def get_stores(frame, mydb):
+   for widget in frame.winfo_children():
+       widget.destroy()
+
+
+   list_frame = tk.Frame(frame, bg="white")
+   list_frame.pack(pady=10, fill="both", expand=True)
+
+
+   conn = mydb.connect_db()
+   cursor = conn.cursor()
+   cursor.execute("SELECT id, address, email, phone FROM store")
+   rows = cursor.fetchall()
+   stores=[]
+   for row in rows:
+       store = Store(*row)
+       stores.append(store)
+   conn.close()
+
+
+   def make_popup(store_obj):
+       def show_popup(event=None):
+           popup = tk.Toplevel()
+           popup.title(f"Store #{store_obj.id} Details")
+           popup.geometry("400x450")
+           popup.configure(bg="white")
+
+
+           details = (f"Store ID: {store_obj.id}\nAddress: {store_obj.address}\n"
+                      f"Email: {store_obj.email}\nPhone: {store_obj.phone}")
+
+
+           msg = tk.Label(popup, text=details.strip(), justify="left", bg="white", font=("Arial", 12))
+           msg.pack(padx=20, pady=10)
+
+
+           # Date range inputs
+           date_frame = tk.Frame(popup, bg="white")
+           date_frame.pack(pady=10)
+
+
+           tk.Label(date_frame, text="Start Date (YYYY-MM-DD):", bg="white").grid(row=0, column=0, padx=5, pady=5)
+           start_entry = tk.Entry(date_frame)
+           start_entry.grid(row=0, column=1, padx=5, pady=5)
+
+
+           tk.Label(date_frame, text="End Date (YYYY-MM-DD):", bg="white").grid(row=1, column=0, padx=5, pady=5)
+           end_entry = tk.Entry(date_frame)
+           end_entry.grid(row=1, column=1, padx=5, pady=5)
+
+
+           result_label = tk.Label(popup, text="", bg="white", font=("Arial", 11))
+           result_label.pack(pady=10)
+
+
+           def show_stats():
+               start = start_entry.get().strip()
+               end = end_entry.get().strip()
+
+
+               try:
+                   start_date = datetime.strptime(start, "%Y-%m-%d").date()
+               except:
+                   start_date = date(1, 1, 1)  # Fallback start
+
+
+               try:
+                   end_date = datetime.strptime(end, "%Y-%m-%d").date()
+               except:
+                   end_date = date(9999, 12, 31)  # Fallback end
+
+
+               try:
+                   orders = store_obj.show_stats(mydb, start_date, end_date)
+                   result_label.config(text=f"Total Orders: {orders}")
+               except Exception as e:
+                   result_label.config(text=f"Error: {e}")
+
+
+           tk.Button(popup, text="Show Store Stats", command=show_stats).pack(pady=5)
+           tk.Button(popup, text="Close", command=popup.destroy).pack(pady=10)
+
+
+       return show_popup
+
+
+   headings = ["ID", "Address"]
+   for col, title in enumerate(headings):
+       tk.Label(list_frame, text=title, font=("Arial", 12, "bold"), bg="white", borderwidth=1, relief="solid",
+                width=20).grid(row=0, column=col)
+
+
+   for row, store in enumerate(stores, start=1):
+       label = tk.Label(list_frame, text=store.id, bg="white", borderwidth=1, relief="solid", width=20,
+                        cursor="hand2")
+       label.grid(row=row, column=0)
+       label.bind("<Button-1>", make_popup(store))
+
+
+       tk.Label(list_frame, text=store.address, bg="white", borderwidth=1, relief="solid", width=20).grid(row=row,
+                                                                                                         column=1)
 
 
 def storage_main(username=""):
