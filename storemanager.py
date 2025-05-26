@@ -283,7 +283,6 @@ def get_orders(frame, store, mydb):
    list_frame = tk.Frame(frame, bg="white")
    list_frame.pack(pady=10, fill="both", expand=True)
 
-
    fetch_orders()
 
 
