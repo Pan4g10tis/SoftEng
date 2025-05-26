@@ -496,6 +496,194 @@ def get_sales(frame, store, mydb):
    fetch_sales()
 
 
+def get_products(frame, store, mydb):
+   for widget in frame.winfo_children():
+       widget.destroy()
+
+
+   filter_frame = tk.Frame(frame, bg="white")
+   filter_frame.pack(pady=10)
+
+
+   products = store.show_products(mydb)
+
+
+   tk.Label(filter_frame, text="Type:", bg="white").grid(row=0, column=4, padx=5, pady=5)
+   type_var = tk.StringVar()
+   type_combobox = ttk.Combobox(filter_frame, textvariable=type_var)
+   product_types = sorted(set([p.type.upper() for p in products]))
+   type_combobox['values'] = ["ALL"] + product_types
+   type_combobox.current(0)
+   type_combobox.grid(row=0, column=5, padx=5)
+
+
+   def make_popup(product_obj):
+       def show_popup(event=None):
+           popup = tk.Toplevel()
+           popup.title(f"Product #{product_obj.id} Details")
+           popup.geometry("400x700")
+           popup.configure(bg="white")
+
+
+           details = (f"Product ID: {product_obj.id}\nName: {product_obj.name}\nManufacturer: "
+                      f"{product_obj.manufacturer}\nType: {product_obj.type}\nPrice: {product_obj.price}"
+                      f"\nStock: {product_obj.stock}")
+
+
+           msg = tk.Label(popup, text=details.strip(), justify="left", bg="white", font=("Arial", 12))
+           msg.pack(padx=20, pady=10)
+
+
+           date_frame = tk.Frame(popup, bg="white")
+           date_frame.pack(pady=10)
+
+
+           tk.Label(date_frame, text="Start Date (YYYY-MM-DD):", bg="white").grid(row=0, column=0, padx=5, pady=5)
+           start_entry = tk.Entry(date_frame)
+           start_entry.grid(row=0, column=1, padx=5, pady=5)
+
+
+           tk.Label(date_frame, text="End Date (YYYY-MM-DD):", bg="white").grid(row=1, column=0, padx=5, pady=5)
+           end_entry = tk.Entry(date_frame)
+           end_entry.grid(row=1, column=1, padx=5, pady=5)
+
+
+           result_label = tk.Label(popup, text="", bg="white", font=("Arial", 11))
+           result_label.pack(pady=10)
+
+
+           def show_stats():
+               start = start_entry.get().strip()
+               end = end_entry.get().strip()
+
+
+               try:
+                   start_date = datetime.strptime(start, "%Y-%m-%d").date()
+               except:
+                   start_date = date(1, 1, 1)  # "0001-01-01"
+
+
+               try:
+                   end_date = datetime.strptime(end, "%Y-%m-%d").date()
+               except:
+                   end_date = date(9999, 12, 31)  # "9999-12-31"
+
+
+               try:
+                   sales = product_obj.store_sale_stats(mydb, store.id, start_date, end_date)
+                   orders = product_obj.store_order_stats(mydb, store.id, start_date, end_date)
+                   result_label.config(text=f"Total Units Sold: {sales}\nTotal Units Ordered: {orders}")
+               except Exception as e:
+                   result_label.config(text=f"Error: {e}")
+
+
+           tk.Button(popup, text="Show Sales Stats", command=show_stats).pack(pady=5)
+
+
+           tk.Label(popup, text="Add a Note:", bg="white", font=("Arial", 11, "bold")).pack(pady=(10, 0))
+           note_text = tk.Text(popup, height=4, width=40)
+           note_text.pack(pady=5)
+
+
+           def submit_note():
+               note_content = note_text.get("1.0", "end").strip()
+               if note_content:
+                   try:
+                       product_obj.insert_notes(mydb, store.id, note_content)
+                       note_text.delete("1.0", "end")
+                       fetch_notes()
+                   except Exception as e:
+                       messagebox.showerror("Error", f"Failed to insert note:\n{e}")
+
+
+           tk.Button(popup, text="Submit Note", command=submit_note).pack(pady=5)
+
+
+           # Existing Notes Display
+           notes_frame = tk.Frame(popup, bg="white")
+           notes_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+
+           notes_label = tk.Label(notes_frame, text="Existing Notes:", bg="white", font=("Arial", 11, "bold"))
+           notes_label.pack(anchor="w")
+
+
+           notes_display = tk.Text(notes_frame, height=10, width=45, state="disabled", wrap="word", bg="#f5f5f5")
+           notes_display.pack(fill="both", expand=True)
+
+
+           def fetch_notes():
+               try:
+                   notes = product_obj.show_notes(mydb, store.id)
+                   notes_display.config(state="normal")
+                   notes_display.delete("1.0", "end")
+                   if notes:
+                       for n in notes:
+                           notes_display.insert("end", f"- {n}\n")
+                   else:
+                       notes_display.insert("end", "No notes available.")
+                   notes_display.config(state="disabled")
+               except Exception as e:
+                   notes_display.config(state="normal")
+                   notes_display.delete("1.0", "end")
+                   notes_display.insert("end", f"Error loading notes: {e}")
+                   notes_display.config(state="disabled")
+
+
+           # Initial notes load
+           fetch_notes()
+
+
+           tk.Button(popup, text="Close", command=popup.destroy).pack(pady=10)
+
+
+       return show_popup
+
+
+   def fetch_products():
+       prod_type = type_var.get()
+
+
+       view_products = products
+
+
+       if prod_type != "ALL":
+           view_products = [p for p in view_products if p.type == prod_type]
+
+
+       for widget in list_frame.winfo_children():
+           widget.destroy()
+
+
+       headings = ["Product ID", "Name", "Stock"]
+       for col, title in enumerate(headings):
+           tk.Label(list_frame, text=title, font=("Arial", 12, "bold"), bg="white", borderwidth=1, relief="solid",
+                    width=20).grid(row=0, column=col)
+
+
+       for row, product in enumerate(view_products, start=1):
+           label = tk.Label(list_frame, text=product.id, bg="white", borderwidth=1, relief="solid", width=20,
+                            cursor="hand2")
+           label.grid(row=row, column=0)
+           label.bind("<Button-1>", make_popup(product))
+
+
+           tk.Label(list_frame, text=product.name, bg="white", borderwidth=1, relief="solid", width=30).grid(row=row,
+                                                                                                             column=1)
+           tk.Label(list_frame, text=str(product.stock), bg="white", borderwidth=1, relief="solid", width=20).grid(
+               row=row, column=2)
+
+
+   tk.Button(filter_frame, text="Search", command=fetch_products).grid(row=0, column=6, padx=10)
+
+
+   list_frame = tk.Frame(frame, bg="white")
+   list_frame.pack(pady=10, fill="both", expand=True)
+
+
+   fetch_products()
+
+
 
 def get_workers(frame, store, mydb):
    for widget in frame.winfo_children():
