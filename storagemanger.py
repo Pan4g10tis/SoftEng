@@ -3,7 +3,7 @@ from tkinter import ttk, messagebox
 import calendar
 from datetime import datetime, date, timedelta
 from PIL import Image, ImageTk
-from classes import StorageManager, Store, WorkerShift, DataBase
+from classes import StorageManager, Store, WorkerShift, DataBase, Product
 
 
 def starter_page(frame, name, storage):
