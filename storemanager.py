@@ -731,20 +731,40 @@ def get_workers(frame, store, mydb):
 
 
            def submit_shift():
-               date = date_entry.get()
-               start = start_entry.get()
-               end = end_entry.get()
-               if not (date and start and end):
-                   messagebox.showerror("Error", "All fields must be filled.")
-                   return
+                date = date_entry.get()
+                start = start_entry.get()
+                end = end_entry.get()
 
+                if not (date and start and end):
+                    messagebox.showerror("Error", "All fields must be filled.")
+                    return
 
-               try:
-                   shift = WorkerShift(worker_obj.id, date, start, end)
-                   shift.insert_store_shift(mydb)
-                   messagebox.showinfo("Success", "Shift added successfully.")
-               except Exception as e:
-                   messagebox.showerror("Error", f"Failed to add shift: {e}")
+                try:
+                    # Validate date format
+                    datetime.strptime(date, "%Y-%m-%d")
+
+                    # Parse start and end times into datetime objects for comparison
+                    start_time = datetime.strptime(start, "%H:%M")
+                    end_time = datetime.strptime(end, "%H:%M")
+
+                    # Check that end time is after start time
+                    if end_time <= start_time:
+                        messagebox.showerror("Error", "End time must be after start time.")
+                        return
+
+                except ValueError:
+                    messagebox.showerror(
+                        "Error",
+                        "Invalid date or time format.\nExpected formats:\nDate: YYYY-MM-DD\nTime: HH:MM"
+                    )
+                    return
+
+                try:
+                    shift = WorkerShift(worker_obj.id, date, start, end)
+                    shift.insert_store_shift(mydb)
+                    messagebox.showinfo("Success", "Shift added successfully.")
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to add shift: {e}")
 
 
            tk.Button(popup, text="Add Shift", command=submit_shift).pack(pady=10)
