@@ -1,9 +1,10 @@
+import csv
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 import calendar
 from datetime import datetime, date, timedelta
 from PIL import Image, ImageTk
-from classes import StorageManager, Store, WorkerShift, DataBase, Product
+from classes import StorageManager, Store, WorkerShift, DataBase, Product, StorageOrder
 
 
 def starter_page(frame, name, storage):
@@ -15,6 +16,212 @@ def starter_page(frame, name, storage):
                    f"Phone: {storage.phone}")
    starter_label = tk.Label(frame, text=starter_text, font=("Arial", 16), bg="white", justify="left")
    starter_label.pack(pady=10)
+
+def get_storage_orders(frame, storage, mydb):
+   for widget in frame.winfo_children():
+       widget.destroy()
+
+
+   def import_csv():
+       file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
+       if not file_path:
+           return
+
+
+       try:
+           with open(file_path, newline='', encoding='utf-8') as csvfile:
+               reader = csv.reader(csvfile)
+               imported = 0
+
+
+               for row in reader:
+                   products = []
+                   amounts = []
+
+
+                   for i in range(0, len(row), 2):
+                       try:
+                           product = row[i].strip()
+                           amount = float(row[i + 1].strip())
+                           products.append(product)
+                           amounts.append(amount)
+                       except (IndexError, ValueError):
+                           continue
+
+
+                   if not products:
+                       continue
+
+
+                   new_order = StorageOrder(
+                       order_id=None,
+                       status='PENDING',
+                       start_date=datetime.today().date(),
+                       end_date=None,
+                       products=products,
+                       amounts=amounts
+                   )
+                   new_order.insert_order(mydb)
+                   imported += 1
+
+
+               messagebox.showinfo("Import Complete", f"{imported} order(s) imported successfully.")
+               nonlocal orders
+               orders = storage.show_storage_orders(mydb)
+               fetch_orders()
+
+
+       except Exception as e:
+           messagebox.showerror("Import Failed", f"Could not import CSV: {e}")
+
+
+   import_button = tk.Button(frame, text="Import CSV", command=import_csv)
+   import_button.pack(pady=(10, 0))
+
+
+   filter_frame = tk.Frame(frame, bg="white")
+   filter_frame.pack(pady=10)
+
+
+   tk.Label(filter_frame, text="Date: From: (YYYY-MM-DD):", bg="white").grid(row=0, column=0, padx=5, pady=5)
+   start_entry = tk.Entry(filter_frame)
+   start_entry.grid(row=0, column=1, padx=5)
+
+
+   tk.Label(filter_frame, text="To: (YYYY-MM-DD):", bg="white").grid(row=0, column=2, padx=5, pady=5)
+   end_entry = tk.Entry(filter_frame)
+   end_entry.grid(row=0, column=3, padx=5)
+
+
+   tk.Label(filter_frame, text="Status:", bg="white").grid(row=0, column=4, padx=5, pady=5)
+   status_var = tk.StringVar()
+   status_combobox = ttk.Combobox(filter_frame, textvariable=status_var)
+   status_combobox['values'] = ["ALL", "PENDING", "COMPLETED", "CANCELED"]
+   status_combobox.current(0)
+   status_combobox.grid(row=0, column=5, padx=5)
+
+
+   orders = storage.show_storage_orders(mydb)
+
+
+   def make_popup(order_obj):
+       def show_popup(event=None):
+           popup = tk.Toplevel()
+           popup.title(f"Order #{order_obj.id} Details")
+           popup.geometry("400x300")
+           popup.configure(bg="white")
+
+
+           details = (f"Order ID: {order_obj.id}\nStatus: {order_obj.status}\nStart Date: {order_obj.start_date}\n"
+                      f"End Date: {order_obj.end_date}\n")
+
+
+           msg = tk.Label(popup, text=details.strip(), justify="left", bg="white", font=("Arial", 12))
+           msg.pack(padx=20, pady=20)
+
+
+           if order_obj.status.upper() == "PENDING":
+               btn_frame = tk.Frame(popup, bg="white")
+               btn_frame.pack(pady=(0, 10))
+
+
+               def mark_complete():
+                   order_obj.complete_order(mydb)
+                   popup.destroy()
+                   nonlocal orders
+                   orders = storage.show_storage_orders(mydb)
+                   fetch_orders()
+
+
+               def mark_canceled():
+                   order_obj.cancel_order(mydb)
+                   popup.destroy()
+                   nonlocal orders
+                   orders = storage.show_storage_orders(mydb)
+                   fetch_orders()
+
+
+               tk.Button(btn_frame, text="Complete", bg="white", fg="black", width=10, command=mark_complete).pack(
+                   side="left", padx=10)
+               tk.Button(btn_frame, text="Cancel", bg="white", fg="black", width=10, command=mark_canceled).pack(
+                   side="left", padx=10)
+
+
+           product_frame = tk.Frame(popup, bg="white")
+           product_frame.pack(padx=20, pady=10, anchor="w")
+
+
+           tk.Label(product_frame, text="Products Ordered:", font=("Arial", 12, "bold"), bg="white").pack(anchor="w")
+
+
+           for product, amount in zip(order_obj.products, order_obj.amounts):
+               line = f"• {product}: {amount}"
+               tk.Label(product_frame, text=line, font=("Arial", 11), bg="white").pack(anchor="w")
+
+
+           tk.Button(popup, text="Close", command=popup.destroy).pack(pady=20)
+
+
+       return show_popup
+
+
+   def fetch_orders():
+       start = start_entry.get()
+       end = end_entry.get()
+       status = status_var.get()
+
+
+       view_orders = orders
+
+
+       if start:
+           try:
+               start_date = datetime.strptime(start, "%Y-%m-%d").date()
+               view_orders = [o for o in view_orders if o.start_date >= start_date]
+           except:
+               pass
+       if end:
+           try:
+               end_date = datetime.strptime(end, "%Y-%m-%d").date()
+               view_orders = [o for o in view_orders if o.start_date <= end_date]
+           except:
+               pass
+       if status != "ALL":
+           view_orders = [o for o in view_orders if o.status == status]
+
+
+       for widget in list_frame.winfo_children():
+           widget.destroy()
+
+
+       headings = ["Order ID", "Status", "Start Date"]
+       for col, title in enumerate(headings):
+           tk.Label(list_frame, text=title, font=("Arial", 12, "bold"), bg="white", borderwidth=1, relief="solid",
+                    width=20).grid(row=0, column=col)
+
+
+       for row, order in enumerate(view_orders, start=1):
+           label = tk.Label(list_frame, text=order.id, bg="white", borderwidth=1, relief="solid", width=20,
+                            cursor="hand2")
+           label.grid(row=row, column=0)
+           label.bind("<Button-1>", make_popup(order))
+
+
+           tk.Label(list_frame, text=order.status, bg="white", borderwidth=1, relief="solid", width=20).grid(row=row,
+                                                                                                             column=1)
+           tk.Label(list_frame, text=str(order.start_date), bg="white", borderwidth=1, relief="solid", width=20).grid(
+               row=row, column=2)
+
+
+   tk.Button(filter_frame, text="Search", command=fetch_orders).grid(row=0, column=6, padx=10)
+
+
+   list_frame = tk.Frame(frame, bg="white")
+   list_frame.pack(pady=10, fill="both", expand=True)
+
+
+   fetch_orders()
+
 
 def get_products(frame, storage, mydb):
    for widget in frame.winfo_children():
