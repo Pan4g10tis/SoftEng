@@ -1,10 +1,10 @@
 import csv
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
-import calendar
 from datetime import datetime, date, timedelta
 from PIL import Image, ImageTk
-from classes import StorageManager, Store, WorkerShift, DataBase, Product, StorageOrder
+import calendar
+from classes import StorageManager, Store, WorkerShift, Product, StorageOrder, DataBase
 
 
 def starter_page(frame, name, storage):
@@ -16,6 +16,187 @@ def starter_page(frame, name, storage):
                    f"Phone: {storage.phone}")
    starter_label = tk.Label(frame, text=starter_text, font=("Arial", 16), bg="white", justify="left")
    starter_label.pack(pady=10)
+
+
+def get_store_orders(frame, storage, mydb):
+   for widget in frame.winfo_children():
+       widget.destroy()
+
+
+   filter_frame = tk.Frame(frame, bg="white")
+   filter_frame.pack(pady=10)
+
+
+   tk.Label(filter_frame, text="Date: From: (YYYY-MM-DD):", bg="white").grid(row=0, column=0, padx=5, pady=5)
+   start_entry = tk.Entry(filter_frame)
+   start_entry.grid(row=0, column=1, padx=5)
+
+
+   tk.Label(filter_frame, text="To: (YYYY-MM-DD):", bg="white").grid(row=0, column=2, padx=5, pady=5)
+   end_entry = tk.Entry(filter_frame)
+   end_entry.grid(row=0, column=3, padx=5)
+
+
+   tk.Label(filter_frame, text="Status:", bg="white").grid(row=0, column=4, padx=5, pady=5)
+   status_var = tk.StringVar()
+   status_combobox = ttk.Combobox(filter_frame, textvariable=status_var)
+   status_combobox['values'] = ["ALL", "PENDING", "CONFIRMED", "SENT", "COMPLETED", "CANCELED"]
+   status_combobox.current(0)
+   status_combobox.grid(row=0, column=5, padx=5)
+
+
+   tk.Label(filter_frame, text="Store Number:", bg="white").grid(row=0, column=6, padx=5, pady=5)
+   store_var = tk.StringVar()
+   store_combobox = ttk.Combobox(filter_frame, textvariable=store_var)
+   store_combobox['values'] = ["ALL", "1", "2"]
+   store_combobox.current(0)
+   store_combobox.grid(row=0, column=7, padx=5)
+
+
+   orders = storage.show_store_orders(mydb)
+
+
+   def make_popup(order_obj):
+       def show_popup(event=None):
+           popup = tk.Toplevel()
+           popup.title(f"Order #{order_obj.id} Details")
+           popup.geometry("400x300")
+           popup.configure(bg="white")
+
+
+           details = (f"Order ID: {order_obj.id}\nStore: {order_obj.store}\nStatus: {order_obj.status}\nPriority: "
+                      f"{order_obj.priority}\nStart Date: {order_obj.start_date}\nEnd Date: "
+                      f"{order_obj.end_date}")
+
+
+           msg = tk.Label(popup, text=details.strip(), justify="left", bg="white", font=("Arial", 12))
+           msg.pack(padx=20, pady=20)
+
+
+           btn_frame = tk.Frame(popup, bg="white")
+           btn_frame.pack(pady=(0, 10))
+
+
+           if order_obj.status.upper() == "PENDING":
+
+
+               def mark_canceled():
+                   order_obj.cancel_order(mydb)
+                   popup.destroy()
+                   nonlocal orders
+                   orders = storage.show_store_orders(mydb)
+                   fetch_orders()
+
+
+               def mark_confirmed():
+                   order_obj.confirm_order(mydb)
+                   popup.destroy()
+                   nonlocal orders
+                   orders = storage.show_store_orders(mydb)
+                   fetch_orders()
+
+
+               tk.Button(btn_frame, text="Cancel", bg="white", fg="black", width=10, command=mark_canceled).pack(
+                   side="left", padx=10)
+               tk.Button(btn_frame, text="Confirm", bg="white", fg="black", width=10, command=mark_confirmed).pack(
+                   side="left", padx=10)
+
+
+           elif order_obj.status.upper() == "CONFIRMED":
+
+
+               def mark_sent():
+                   order_obj.send_order(mydb)
+                   popup.destroy()
+                   nonlocal orders
+                   orders = storage.show_store_orders(mydb)
+                   fetch_orders()
+
+
+               tk.Button(btn_frame, text="Send", bg="white", fg="black", width=10, command=mark_sent).pack(
+                   side="left", padx=10)
+
+
+           product_frame = tk.Frame(popup, bg="white")
+           product_frame.pack(padx=20, pady=10, anchor="w")
+
+
+           tk.Label(product_frame, text="Products Ordered:", font=("Arial", 12, "bold"), bg="white").pack(anchor="w")
+
+
+           for product, amount in zip(order_obj.products, order_obj.amounts):
+               line = f"• {product}: {amount}"
+               tk.Label(product_frame, text=line, font=("Arial", 11), bg="white").pack(anchor="w")
+
+
+           tk.Button(popup, text="Close", command=popup.destroy).pack(pady=20)
+
+
+       return show_popup
+
+
+   def fetch_orders():
+       start = start_entry.get()
+       end = end_entry.get()
+       status = status_var.get()
+       store = store_var.get()
+
+
+       view_orders = orders
+
+
+       if start:
+           try:
+               start_date = datetime.strptime(start, "%Y-%m-%d").date()
+               view_orders = [o for o in view_orders if o.start_date >= start_date]
+           except:
+               pass
+       if end:
+           try:
+               end_date = datetime.strptime(end, "%Y-%m-%d").date()
+               view_orders = [o for o in view_orders if o.start_date <= end_date]
+           except:
+               pass
+       if status != "ALL":
+           view_orders = [o for o in view_orders if o.status == status]
+       if store != "ALL":
+           view_orders = [o for o in view_orders if str(o.store) == store]
+
+
+       for widget in list_frame.winfo_children():
+           widget.destroy()
+
+
+       headings = ["Order ID", "Store", "Status", "Start Date"]
+       for col, title in enumerate(headings):
+           tk.Label(list_frame, text=title, font=("Arial", 12, "bold"), bg="white", borderwidth=1, relief="solid",
+                    width=20).grid(row=0, column=col)
+
+
+       for row, order in enumerate(view_orders, start=1):
+           label = tk.Label(list_frame, text=order.id, bg="white", borderwidth=1, relief="solid", width=20,
+                            cursor="hand2")
+           label.grid(row=row, column=0)
+           label.bind("<Button-1>", make_popup(order))
+
+
+           tk.Label(list_frame, text=order.store, bg="white", borderwidth=1, relief="solid", width=20).grid(row=row,
+                                                                                                             column=1)
+           tk.Label(list_frame, text=order.status, bg="white", borderwidth=1, relief="solid", width=20).grid(row=row,
+                                                                                                             column=1)
+           tk.Label(list_frame, text=str(order.start_date), bg="white", borderwidth=1, relief="solid", width=20).grid(
+               row=row, column=2)
+
+
+   tk.Button(filter_frame, text="Search", command=fetch_orders).grid(row=0, column=8, padx=10)
+
+
+   list_frame = tk.Frame(frame, bg="white")
+   list_frame.pack(pady=10, fill="both", expand=True)
+
+
+   fetch_orders()
+
 
 def get_storage_orders(frame, storage, mydb):
    for widget in frame.winfo_children():
@@ -443,7 +624,6 @@ def get_products(frame, storage, mydb):
    fetch_products()
 
 
-
 def get_workers(frame, storage, mydb):
    for widget in frame.winfo_children():
        widget.destroy()
@@ -638,8 +818,6 @@ def get_workers(frame, storage, mydb):
    render_calendar(current_date.year, current_date.month)
 
 
-
-
 def get_stores(frame, mydb):
    for widget in frame.winfo_children():
        widget.destroy()
@@ -741,7 +919,7 @@ def get_stores(frame, mydb):
 
        tk.Label(list_frame, text=store.address, bg="white", borderwidth=1, relief="solid", width=20).grid(row=row,
                                                                                                          column=1)
-
+      
 
 def storage_main(username=""):
    mydb = DataBase("root", "root", "localhost", "indusstock")
@@ -801,183 +979,3 @@ def storage_main(username=""):
 
    window.mainloop()
 
-
-
-def get_store_orders(frame, storage, mydb):
-   for widget in frame.winfo_children():
-       widget.destroy()
-
-
-   filter_frame = tk.Frame(frame, bg="white")
-   filter_frame.pack(pady=10)
-
-
-   tk.Label(filter_frame, text="Date: From: (YYYY-MM-DD):", bg="white").grid(row=0, column=0, padx=5, pady=5)
-   start_entry = tk.Entry(filter_frame)
-   start_entry.grid(row=0, column=1, padx=5)
-
-
-   tk.Label(filter_frame, text="To: (YYYY-MM-DD):", bg="white").grid(row=0, column=2, padx=5, pady=5)
-   end_entry = tk.Entry(filter_frame)
-   end_entry.grid(row=0, column=3, padx=5)
-
-
-   tk.Label(filter_frame, text="Status:", bg="white").grid(row=0, column=4, padx=5, pady=5)
-   status_var = tk.StringVar()
-   status_combobox = ttk.Combobox(filter_frame, textvariable=status_var)
-   status_combobox['values'] = ["ALL", "PENDING", "CONFIRMED", "SENT", "COMPLETED", "CANCELED"]
-   status_combobox.current(0)
-   status_combobox.grid(row=0, column=5, padx=5)
-
-
-   tk.Label(filter_frame, text="Store Number:", bg="white").grid(row=0, column=6, padx=5, pady=5)
-   store_var = tk.StringVar()
-   store_combobox = ttk.Combobox(filter_frame, textvariable=store_var)
-   store_combobox['values'] = ["ALL", "1", "2"]
-   store_combobox.current(0)
-   store_combobox.grid(row=0, column=7, padx=5)
-
-
-   orders = storage.show_store_orders(mydb)
-
-
-   def make_popup(order_obj):
-       def show_popup(event=None):
-           popup = tk.Toplevel()
-           popup.title(f"Order #{order_obj.id} Details")
-           popup.geometry("400x300")
-           popup.configure(bg="white")
-
-
-           details = (f"Order ID: {order_obj.id}\nStore: {order_obj.store}\nStatus: {order_obj.status}\nPriority: "
-                      f"{order_obj.priority}\nStart Date: {order_obj.start_date}\nEnd Date: "
-                      f"{order_obj.end_date}")
-
-
-           msg = tk.Label(popup, text=details.strip(), justify="left", bg="white", font=("Arial", 12))
-           msg.pack(padx=20, pady=20)
-
-
-           btn_frame = tk.Frame(popup, bg="white")
-           btn_frame.pack(pady=(0, 10))
-
-
-           if order_obj.status.upper() == "PENDING":
-
-
-               def mark_canceled():
-                   order_obj.cancel_order(mydb)
-                   popup.destroy()
-                   nonlocal orders
-                   orders = storage.show_store_orders(mydb)
-                   fetch_orders()
-
-
-               def mark_confirmed():
-                   order_obj.confirm_order(mydb)
-                   popup.destroy()
-                   nonlocal orders
-                   orders = storage.show_store_orders(mydb)
-                   fetch_orders()
-
-
-               tk.Button(btn_frame, text="Cancel", bg="white", fg="black", width=10, command=mark_canceled).pack(
-                   side="left", padx=10)
-               tk.Button(btn_frame, text="Confirm", bg="white", fg="black", width=10, command=mark_confirmed).pack(
-                   side="left", padx=10)
-
-
-           elif order_obj.status.upper() == "CONFIRMED":
-
-
-               def mark_sent():
-                   order_obj.send_order(mydb)
-                   popup.destroy()
-                   nonlocal orders
-                   orders = storage.show_store_orders(mydb)
-                   fetch_orders()
-
-
-               tk.Button(btn_frame, text="Send", bg="white", fg="black", width=10, command=mark_sent).pack(
-                   side="left", padx=10)
-
-
-           product_frame = tk.Frame(popup, bg="white")
-           product_frame.pack(padx=20, pady=10, anchor="w")
-
-
-           tk.Label(product_frame, text="Products Ordered:", font=("Arial", 12, "bold"), bg="white").pack(anchor="w")
-
-
-           for product, amount in zip(order_obj.products, order_obj.amounts):
-               line = f"• {product}: {amount}"
-               tk.Label(product_frame, text=line, font=("Arial", 11), bg="white").pack(anchor="w")
-
-
-           tk.Button(popup, text="Close", command=popup.destroy).pack(pady=20)
-
-
-       return show_popup
-
-
-   def fetch_orders():
-       start = start_entry.get()
-       end = end_entry.get()
-       status = status_var.get()
-       store = store_var.get()
-
-
-       view_orders = orders
-
-
-       if start:
-           try:
-               start_date = datetime.strptime(start, "%Y-%m-%d").date()
-               view_orders = [o for o in view_orders if o.start_date >= start_date]
-           except:
-               pass
-       if end:
-           try:
-               end_date = datetime.strptime(end, "%Y-%m-%d").date()
-               view_orders = [o for o in view_orders if o.start_date <= end_date]
-           except:
-               pass
-       if status != "ALL":
-           view_orders = [o for o in view_orders if o.status == status]
-       if store != "ALL":
-           view_orders = [o for o in view_orders if str(o.store) == store]
-
-
-       for widget in list_frame.winfo_children():
-           widget.destroy()
-
-
-       headings = ["Order ID", "Store", "Status", "Start Date"]
-       for col, title in enumerate(headings):
-           tk.Label(list_frame, text=title, font=("Arial", 12, "bold"), bg="white", borderwidth=1, relief="solid",
-                    width=20).grid(row=0, column=col)
-
-
-       for row, order in enumerate(view_orders, start=1):
-           label = tk.Label(list_frame, text=order.id, bg="white", borderwidth=1, relief="solid", width=20,
-                            cursor="hand2")
-           label.grid(row=row, column=0)
-           label.bind("<Button-1>", make_popup(order))
-
-
-           tk.Label(list_frame, text=order.store, bg="white", borderwidth=1, relief="solid", width=20).grid(row=row,
-                                                                                                             column=1)
-           tk.Label(list_frame, text=order.status, bg="white", borderwidth=1, relief="solid", width=20).grid(row=row,
-                                                                                                             column=1)
-           tk.Label(list_frame, text=str(order.start_date), bg="white", borderwidth=1, relief="solid", width=20).grid(
-               row=row, column=2)
-
-
-   tk.Button(filter_frame, text="Search", command=fetch_orders).grid(row=0, column=8, padx=10)
-
-
-   list_frame = tk.Frame(frame, bg="white")
-   list_frame.pack(pady=10, fill="both", expand=True)
-
-
-   fetch_orders()
