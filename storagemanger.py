@@ -16,6 +16,226 @@ def starter_page(frame, name, storage):
    starter_label = tk.Label(frame, text=starter_text, font=("Arial", 16), bg="white", justify="left")
    starter_label.pack(pady=10)
 
+def get_products(frame, storage, mydb):
+   for widget in frame.winfo_children():
+       widget.destroy()
+
+
+   def open_new_product_popup():
+       popup = tk.Toplevel()
+       popup.title("Add New Product")
+       popup.geometry("300x450")
+       popup.configure(bg="white")
+
+
+       tk.Label(popup, text="Name:", bg="white").pack(pady=5)
+       name_entry = tk.Entry(popup)
+       name_entry.pack(pady=5)
+
+
+       tk.Label(popup, text="Manufacturer:", bg="white").pack(pady=5)
+       manu_entry = tk.Entry(popup)
+       manu_entry.pack(pady=5)
+
+
+       tk.Label(popup, text="Type:", bg="white").pack(pady=5)
+       type_entry = tk.Entry(popup)
+       type_entry.pack(pady=5)
+
+
+       tk.Label(popup, text="Price:", bg="white").pack(pady=5)
+       price_entry = tk.Entry(popup)
+       price_entry.pack(pady=5)
+
+
+       result_label = tk.Label(popup, text="", bg="white", fg="red")
+       result_label.pack(pady=10)
+
+
+       def submit_product():
+           name = name_entry.get().strip()
+           manu = manu_entry.get().strip()
+           type = type_entry.get().strip().upper()
+           try:
+   	         price = float(price_entry.get().strip())
+   		   if price <= 0:
+                   result_label.config(text="Price must be greater than 0.")
+                   return		   
+           except ValueError:
+               result_label.config(text="Invalid price.")
+               return
+
+
+           if not name or not manu:
+               result_label.config(text="All fields are required.")
+               return
+
+
+           product = Product(0, name, manu, type, price,0)
+
+
+           try:
+               product.insert_product(mydb)
+               popup.destroy()
+               nonlocal products
+               products = storage.show_products(mydb)
+               fetch_products()
+           except Exception as e:
+               result_label.config(text=f"Error: {e}")
+
+
+       tk.Button(popup, text="Submit", command=submit_product).pack(pady=10)
+       tk.Button(popup, text="Cancel", command=popup.destroy).pack(pady=5)
+
+
+   tk.Button(frame, text="Add New Product", command=open_new_product_popup).pack(pady=5)
+
+
+   filter_frame = tk.Frame(frame, bg="white")
+   filter_frame.pack(pady=10)
+
+
+
+
+   products = storage.show_products(mydb)
+
+
+   tk.Label(filter_frame, text="Type:", bg="white").grid(row=0, column=4, padx=5, pady=5)
+   type_var = tk.StringVar()
+   type_combobox = ttk.Combobox(filter_frame, textvariable=type_var)
+   product_types = sorted(set([p.type.upper() for p in products]))
+   type_combobox['values'] = ["ALL"] + product_types
+   type_combobox.current(0)
+   type_combobox.grid(row=0, column=5, padx=5)
+
+
+   def make_popup(product_obj):
+       def show_popup(event=None):
+           popup = tk.Toplevel()
+           popup.title(f"Product #{product_obj.id} Details")
+           popup.geometry("400x450")
+           popup.configure(bg="white")
+
+
+           details = (f"Product ID: {product_obj.id}\nName: {product_obj.name}\nManufacturer: "
+                      f"{product_obj.manufacturer}\nType: {product_obj.type}\nPrice: {product_obj.price}"
+                      f"\nStock: {product_obj.stock}")
+
+
+           msg = tk.Label(popup, text=details.strip(), justify="left", bg="white", font=("Arial", 12))
+           msg.pack(padx=20, pady=10)
+
+
+           def delete_product():
+               try:
+                   product_obj.delete_product(mydb)
+                   popup.destroy()
+                   nonlocal products
+                   products = storage.show_products(mydb)
+                   fetch_products()
+               except Exception as e:
+                   result_label.config(text=f"Error deleting product: {e}", fg="red")
+
+
+           tk.Button(popup, text="Delete Product", command=delete_product, bg="red", fg="white").pack(pady=5)
+
+
+           date_frame = tk.Frame(popup, bg="white")
+           date_frame.pack(pady=10)
+
+
+           tk.Label(date_frame, text="Start Date (YYYY-MM-DD):", bg="white").grid(row=0, column=0, padx=5, pady=5)
+           start_entry = tk.Entry(date_frame)
+           start_entry.grid(row=0, column=1, padx=5, pady=5)
+
+
+           tk.Label(date_frame, text="End Date (YYYY-MM-DD):", bg="white").grid(row=1, column=0, padx=5, pady=5)
+           end_entry = tk.Entry(date_frame)
+           end_entry.grid(row=1, column=1, padx=5, pady=5)
+
+
+           result_label = tk.Label(popup, text="", bg="white", font=("Arial", 11))
+           result_label.pack(pady=10)
+
+
+           def show_stats():
+               start = start_entry.get().strip()
+               end = end_entry.get().strip()
+
+
+               try:
+                   start_date = datetime.strptime(start, "%Y-%m-%d").date()
+               except:
+                   start_date = date(1, 1, 1)  # "0001-01-01"
+
+
+               try:
+                   end_date = datetime.strptime(end, "%Y-%m-%d").date()
+               except:
+                   end_date = date(9999, 12, 31)  # "9999-12-31"
+
+
+               try:
+                   sent = product_obj.storage_sent_stats(mydb, storage.id, start_date, end_date)
+                   orders = product_obj.storage_order_stats(mydb, storage.id, start_date, end_date)
+                   result_label.config(text=f"Total Units Sent: {sent}\nTotal Units Ordered: {orders}")
+               except Exception as e:
+                   result_label.config(text=f"Error: {e}")
+
+
+           tk.Button(popup, text="Show Sales Stats", command=show_stats).pack(pady=5)
+
+
+           tk.Button(popup, text="Close", command=popup.destroy).pack(pady=10)
+
+
+       return show_popup
+
+
+   def fetch_products():
+       prod_type = type_var.get()
+
+
+       view_products = products
+
+
+       if prod_type != "ALL":
+           view_products = [p for p in view_products if p.type == prod_type]
+
+
+       for widget in list_frame.winfo_children():
+           widget.destroy()
+
+
+       headings = ["Product ID", "Name", "Stock"]
+       for col, title in enumerate(headings):
+           tk.Label(list_frame, text=title, font=("Arial", 12, "bold"), bg="white", borderwidth=1, relief="solid",
+                    width=20).grid(row=0, column=col)
+
+
+       for row, product in enumerate(view_products, start=1):
+           label = tk.Label(list_frame, text=product.id, bg="white", borderwidth=1, relief="solid", width=20,
+                            cursor="hand2")
+           label.grid(row=row, column=0)
+           label.bind("<Button-1>", make_popup(product))
+
+
+           tk.Label(list_frame, text=product.name, bg="white", borderwidth=1, relief="solid", width=30).grid(row=row,
+                                                                                                             column=1)
+           tk.Label(list_frame, text=str(product.stock), bg="white", borderwidth=1, relief="solid", width=20).grid(
+               row=row, column=2)
+
+
+   tk.Button(filter_frame, text="Search", command=fetch_products).grid(row=0, column=6, padx=10)
+
+
+   list_frame = tk.Frame(frame, bg="white")
+   list_frame.pack(pady=10, fill="both", expand=True)
+
+
+   fetch_products()
+
+
 
 def get_workers(frame, storage, mydb):
    for widget in frame.winfo_children():
