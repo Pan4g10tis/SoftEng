@@ -1,6 +1,4 @@
-Mnimport mysql.connector
-
-
+import mysql.connector
 
 
 class DataBase:
@@ -10,16 +8,13 @@ class DataBase:
        self.host = host
        self.database = database
 
-
    def connect_db(self):
        return mysql.connector.connect(
            user=self.user,
            password=self.password,
            host=self.host,
            database=self.database
-       )salStoreSa
-
-
+       )
 
 
 class Store:
@@ -28,7 +23,6 @@ class Store:
        self.address = address
        self.email = email
        self.phone = phone
-
 
    def show_orders(self, mydb):
        conn = mydb.connect_db()
@@ -49,7 +43,6 @@ class Store:
        conn.close()
        return orders
 
-
    def show_sales(self, mydb):
        conn = mydb.connect_db()
        cursor = conn.cursor()
@@ -69,7 +62,6 @@ class Store:
        conn.close()
        return sales
 
-
    def show_workers(self, mydb):
        conn = mydb.connect_db()
        cursor = conn.cursor()
@@ -81,7 +73,6 @@ class Store:
            workers.append(worker)
        conn.close()
        return workers
-
 
    def show_products(self, mydb):
        conn = mydb.connect_db()
@@ -97,7 +88,6 @@ class Store:
        conn.close()
        return products
 
-
    def show_stats(self, mydb, start_date, end_date):
        conn = mydb.connect_db()
        cursor = conn.cursor()
@@ -107,15 +97,12 @@ class Store:
        return result[0]
 
 
-
-
 class Storage:
    def __init__(self, storage_id, address, email, phone):
        self.id = storage_id
        self.address = address
        self.email = email
        self.phone = phone
-
 
    def show_store_orders(self, mydb):
        conn = mydb.connect_db()
@@ -136,7 +123,6 @@ class Storage:
        conn.close()
        return orders
 
-
    def show_storage_orders(self, mydb):
        conn = mydb.connect_db()
        cursor = conn.cursor()
@@ -156,7 +142,6 @@ class Storage:
        conn.close()
        return orders
 
-
    def show_workers(self, mydb):
        conn = mydb.connect_db()
        cursor = conn.cursor()
@@ -168,7 +153,6 @@ class Storage:
            workers.append(worker)
        conn.close()
        return workers
-
 
    def show_products(self, mydb):
        conn = mydb.connect_db()
@@ -184,9 +168,6 @@ class Storage:
        conn.close()
        return products
 
-
-
-
 class Worker:
    def __init__(self, worker_id, name, surname, email, phone):
        self.id = worker_id
@@ -194,7 +175,6 @@ class Worker:
        self.surname = surname
        self.email = email
        self.phone = phone
-
 
    def show_store_shift(self, mydb, date):
        conn = mydb.connect_db()
@@ -204,7 +184,6 @@ class Worker:
        results = cursor.fetchall()
        return [(self.surname, start, end) for start, end in results]
 
-
    def show_storage_shift(self, mydb, date):
        conn = mydb.connect_db()
        cursor = conn.cursor()
@@ -212,8 +191,6 @@ class Worker:
                       "WHERE worker = %s AND shift_date = %s", (self.id, date))
        results = cursor.fetchall()
        return [(self.surname, start, end) for start, end in results]
-
-
 
 
 class StoreManager:
@@ -226,7 +203,6 @@ class StoreManager:
        self.phone = phone
        self.store = store
 
-
    def get_store(self, mydb):
        conn = mydb.connect_db()
        cursor = conn.cursor()
@@ -236,8 +212,7 @@ class StoreManager:
        conn.close()
        my_store = Store(*result)
        return my_store
-
-
+      
    @classmethod
    def create(cls, mydb, username):
        conn = mydb.connect_db()
@@ -250,8 +225,6 @@ class StoreManager:
        return manager
 
 
-
-
 class StorageManager:
    def __init__(self, username, password, name, surname, email, phone, storage):
        self.username = username
@@ -262,7 +235,6 @@ class StorageManager:
        self.phone = phone
        self.storage = storage
 
-
    def get_storage(self, mydb):
        conn = mydb.connect_db()
        cursor = conn.cursor()
@@ -272,8 +244,7 @@ class StorageManager:
        conn.close()
        my_storage = Storage(*result)
        return my_storage
-
-
+      
    @classmethod
    def create(cls, mydb, username):
        conn = mydb.connect_db()
@@ -286,8 +257,6 @@ class StorageManager:
        return manager
 
 
-
-
 class Product:
    def __init__(self, product_id, name, manufacturer, prod_type, price, stock):
        self.id = product_id
@@ -296,7 +265,6 @@ class Product:
        self.type = prod_type
        self.price = price
        self.stock = stock
-
 
    def store_sale_stats(self, mydb, store, start_date, end_date):
        conn = mydb.connect_db()
@@ -309,7 +277,6 @@ class Product:
        conn.close()
        return sum(row[0] for row in rows)
 
-
    def store_order_stats(self, mydb, store, start_date, end_date):
        conn = mydb.connect_db()
        cursor = conn.cursor()
@@ -320,7 +287,6 @@ class Product:
        rows = cursor.fetchall()
        conn.close()
        return sum(row[0] for row in rows)
-
 
    def storage_sent_stats(self, mydb, storage, start_date, end_date):
        conn = mydb.connect_db()
@@ -333,7 +299,6 @@ class Product:
        conn.close()
        return sum(row[0] for row in rows)
 
-
    def storage_order_stats(self, mydb, storage, start_date, end_date):
        conn = mydb.connect_db()
        cursor = conn.cursor()
@@ -344,7 +309,6 @@ class Product:
        rows = cursor.fetchall()
        conn.close()
        return sum(row[0] for row in rows)
-
 
    def insert_product(self, mydb):
        conn = mydb.connect_db()
@@ -363,7 +327,6 @@ class Product:
        finally:
            conn.close()
 
-
    def delete_product(self, mydb):
        conn = mydb.connect_db()
        cursor = conn.cursor()
@@ -374,7 +337,6 @@ class Product:
            conn.commit()
        finally:
            conn.close()
-
 
    def show_notes(self, mydb, store):
        conn = mydb.connect_db()
@@ -387,7 +349,6 @@ class Product:
        conn.close()
        return notes
 
-
    def insert_notes(self, mydb, store, note):
        conn = mydb.connect_db()
        cursor = conn.cursor()
@@ -396,8 +357,6 @@ class Product:
            conn.commit()
        finally:
            conn.close()
-
-
 
 
 class StoreOrder:
@@ -410,7 +369,6 @@ class StoreOrder:
        self.end_date = end_date
        self.products = products
        self.amounts = amounts
-
 
    def insert_order(self, mydb):
        conn = mydb.connect_db()
@@ -426,7 +384,6 @@ class StoreOrder:
            conn.commit()
        finally:
            conn.close()
-
 
    def complete_order(self, mydb):
        conn = mydb.connect_db()
@@ -445,7 +402,6 @@ class StoreOrder:
        finally:
            conn.close()
 
-
    def cancel_order(self, mydb):
        conn = mydb.connect_db()
        try:
@@ -456,7 +412,6 @@ class StoreOrder:
        finally:
            conn.close()
 
-
    def confirm_order(self, mydb):
        conn = mydb.connect_db()
        try:
@@ -465,10 +420,8 @@ class StoreOrder:
                           ("CONFIRMED", self.id))
            conn.commit()
 
-
        finally:
            conn.close()
-
 
    def send_order(self,mydb):
        conn = mydb.connect_db()
@@ -497,7 +450,6 @@ class StorageOrder:
        self.products = products
        self.amounts = amounts
 
-
    def insert_order(self, mydb):
        conn = mydb.connect_db()
        try:
@@ -513,7 +465,6 @@ class StorageOrder:
            conn.commit()
        finally:
            conn.close()
-
 
    def complete_order(self, mydb):
        conn = mydb.connect_db()
@@ -532,7 +483,6 @@ class StorageOrder:
        finally:
            conn.close()
 
-
    def cancel_order(self, mydb):
        conn = mydb.connect_db()
        try:
@@ -542,9 +492,7 @@ class StorageOrder:
            conn.commit()
        finally:
            conn.close()
-
-
-
+          
 
 class StoreSale:
    def __init__(self, sale_id, store, date, products, amounts):
@@ -553,7 +501,6 @@ class StoreSale:
        self.date = date
        self.products = products
        self.amounts = amounts
-
 
    def insert_sale(self, mydb):
        conn = mydb.connect_db()
@@ -575,9 +522,7 @@ class StoreSale:
            conn.commit()
        finally:
            conn.close()
-
-
-
+          
 
 class WorkerShift:
    def __init__(self, worker, date, start_time, end_time):
@@ -585,7 +530,6 @@ class WorkerShift:
        self.date = date
        self.start_time = start_time
        self.end_time = end_time
-
 
    def insert_store_shift(self, mydb):
        conn = mydb.connect_db()
@@ -597,7 +541,6 @@ class WorkerShift:
        finally:
            conn.close()
 
-
    def insert_storage_shift(self, mydb):
        conn = mydb.connect_db()
        try:
@@ -607,4 +550,3 @@ class WorkerShift:
            conn.commit()
        finally:
            conn.close()
-
